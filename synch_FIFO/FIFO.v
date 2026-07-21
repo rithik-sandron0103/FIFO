@@ -1,17 +1,17 @@
 module fifo #(
-    parameter BIT_WIDTH = 8,    // Data width of each FIFO entry
+    parameter DATA_WIDTH = 8,    // Data width of each FIFO entry
     parameter FIFO_DEPTH = 16   // Buffer size
 )          (input clk,
             input rst,
             input w_en,
             input r_en,
-            input [BIT_WIDTH-1:0] din,
-            output reg [BIT_WIDTH-1:0] dout,
+            input [DATA_WIDTH-1:0] din,
+            output reg [DATA_WIDTH-1:0] dout,
             output full,
             output empty);
 
     // Memory array declaration: 16 rows of 8-bit data (by default)
-    reg [BIT_WIDTH-1:0] memory [0:FIFO_DEPTH-1];
+    reg [DATA_WIDTH-1:0] memory [0:FIFO_DEPTH-1];
 
     // Local Parameter Calculation
     localparam ADDR = $clog2(FIFO_DEPTH); //Minimum number of bits to represent each mempry element
@@ -37,7 +37,7 @@ module fifo #(
     always @(posedge clk) begin
         if (rst) begin
             r_ptr <= {(ADDR+1){1'b0}};
-            dout <= {BIT_WIDTH{1'b0}};
+            dout <= {DATA_WIDTH{1'b0}};
         end
         else if (r_en && !empty) begin
             dout <= memory[ r_ptr[ADDR-1:0] ]; //Lower bits for memory indexing
