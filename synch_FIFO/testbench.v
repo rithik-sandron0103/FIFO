@@ -51,7 +51,7 @@ module fifo_tb();
         rst = 0;
         #5
 
-        // Writing to FIFO until full (Depth = 16, writes 17 to test guard)
+        // Writing to FIFO until full (Depth = 16, writes 17 entries to test guard)
         w_en = 1;
         for(i = 0; i <= 16; i = i+1) begin
             din = i;
