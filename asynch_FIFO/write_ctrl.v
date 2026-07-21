@@ -1,20 +1,27 @@
-module w_ctrl(input wclk,
-                  input wrst,
-                  input w_en,
-                  input [4:0] wq2_rptr,
-                  output reg wfull,
-                  output [3:0] waddr,
-                  output reg [4:0] wptr);
+module w_ctrl # (
+    parameter FIFO_DEPTH = 16  // Buffer size
+)          (input wclk,                             // Write domain clock
+            input wrst,                             // Write domain active-high reset
+            input w_en,                             // Write enable request
+            input [$clog2(FIFO_DEPTH):0] wq2_rptr,  // Synchronized read pointer from read clock domain (Gray code)
+            output reg wfull,                       // Write full flag 
+            output [$clog2(FIFO_DEPTH)-1:0] waddr,  // Memory write address
+            output reg [$clog2(FIFO_DEPTH):0] wptr  // Write pointer output to cross clock domain (Gray code)
+            );
 
-    reg [4:0] wbin;
-    wire [4:0] wbin_next;
-    wire [4:0] wgray_next;
-    wire wfull_value;
+    // Local parameter calculation
+    localparam ADDR = $clog2(FIFO_DEPTH);
 
+    reg [ADDR:0] wbin;        // Internal binary write pointer
+    wire [ADDR:0] wbin_next;  // Next state value for binary pointer
+    wire [ADDR:0] wgray_next; // Next state value for gray code pointer
+    wire wfull_value;         // Combinational full flag evaluation
+
+    // Sequential pointer update logic
     always @(posedge wclk or posedge wrst) begin
         if (wrst) begin
-            wbin <= 5'b0;
-            wptr <= 5'b0;
+            wbin <= {(ADDR+1){1'b0}};
+            wptr <= {(ADDR+1){1'b0}};
         end
         else begin
             wbin <= wbin_next;
@@ -22,15 +29,21 @@ module w_ctrl(input wclk,
         end
     end
 
-    assign wbin_next = wbin + (w_en && !wfull); //Pointer increment logic
+    // Increment binary pointer only if write is enabled and FIFO is not full
+    assign wbin_next = wbin + (w_en && !wfull);
 
-    assign wgray_next = wbin_next ^ (wbin_next>>1); //Binary to Gray code conversion
+    // Convert the next binary pointer value to gray code
+    assign wgray_next = wbin_next ^ (wbin_next>>1);
 
-    assign waddr = wptr[3:0]; //Bit slicing the lower 4 bits
+    // Extract lower address bits from the binary write pointer for memory indexing
+    assign waddr = wbin[ADDR-1:0];
 
-    assign wfull_value = (wgray_next[4] != wq2_rptr[4]) && (wgray_next[3:0] == wq2_rptr[3:0]); //Combinational calculation of flag
+    // FIFO is full when next write Gray pointer has mismatching MSB and MSB-1 bits but identical lower address bits compared to synchronized read pointer
+    assign wfull_value = (wgray_next[ADDR] != wq2_rptr[ADDR]) && 
+                         (wgray_next[ADDR-1] != wq2_rptr[ADDR-1]) &&
+                         (wgray_next[ADDR-2:0] == wq2_rptr[ADDR-2:0]);
 
-    //Updating flag in the next clock cycle (Sequential part)
+    // Sequential update of full flag
     always @(posedge wclk or posedge wrst) begin
         if (wrst) wfull <= 0;
         else wfull <= wfull_value;

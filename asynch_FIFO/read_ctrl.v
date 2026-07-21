@@ -1,20 +1,27 @@
-module r_ctrl(input rclk,
-                 input rrst,
-                 input r_en,
-                 input [4:0] rq2_wptr,
-                 output reg rempty,
-                 output [3:0] raddr,
-                 output reg [4:0] rptr);
+module r_ctrl #(
+    parameter FIFO_DEPTH = 16  // Buffer size
+)           (input rclk,                              // Read domain clock
+             input rrst,                              // Read domain active-high reset
+             input r_en,                              // Read enable request
+             input [$clog2(FIFO_DEPTH):0] rq2_wptr,   // Synchronized write pointer from write clock domain (Gray code)
+             output reg rempty,                       // Read empty flag
+             output [$clog2(FIFO_DEPTH)-1:0] raddr,   // Memory read address
+             output reg [$clog2(FIFO_DEPTH):0] rptr   // Read pointer output to cross clock domain (Gray code)
+            );
     
-    reg [4:0] rbin;
-    wire [4:0] rbin_next;
-    wire [4:0] rgray_next;
-    wire rempty_val;
+    // Local parameter calculation
+    localparam ADDR = $clog2(FIFO_DEPTH);
 
+    reg [ADDR:0] rbin;        // Internal binary read pointer
+    wire [ADDR:0] rbin_next;  // Next state value for binary pointer
+    wire [ADDR:0] rgray_next; // Next state value for gray code pointer
+    wire rempty_val;          // Combinational empty flag evaluation
+
+    // Sequential pointer update logic
     always @(posedge rclk or posedge rrst) begin
         if (rrst) begin
-            rbin <= 5'b0;
-            rptr <= 5'b0;
+            rbin <= {(ADDR+1){1'b0}};
+            rptr <= {(ADDR+1){1'b0}};
         end
         else begin
             rbin <= rbin_next;
@@ -22,17 +29,21 @@ module r_ctrl(input rclk,
         end
     end
 
-    assign rbin_next = rbin + (r_en && !rempty); //Pointer increment logic
+    // Increment binary pointer only if read is enabled and FIFO is not empty
+    assign rbin_next = rbin + (r_en && !rempty);
 
-    assign rgray_next = rbin_next ^ (rbin_next>>1); //Binary to Gray code conversion
+    // Convert the next binary pointer value to gray code
+    assign rgray_next = rbin_next ^ (rbin_next>>1);
 
-    assign raddr = rptr[3:0]; //Bit slicing the lower 4 bits
+    // Extract lower address bits from the binary read pointer for memory indexing
+    assign raddr = rbin[ADDR-1:0];
 
-    assign rempty_val = (rgray_next == rq2_wptr); //Combinational calculation of flag
+    // FIFO is empty when the next read Gray pointer matches the synchronized write pointer
+    assign rempty_val = (rgray_next == rq2_wptr);
 
-    //Updating flag in the next clock cycle (Sequential part)
+    // Sequential update of empty flag
     always @(posedge rclk or posedge rrst) begin
-        if (rrst) rempty <= 1;
+        if (rrst) rempty <= 1'b1;
         else rempty <= rempty_val;
     end
 
