@@ -1,19 +1,26 @@
 `timescale 1ns/1ps
 
 module fifo_tb();
-    //Inputs of UUT
-    reg clk;
-    reg rst;
-    reg w_en;
-    reg r_en;
-    reg [7:0] din;
+    // Parameters
+    parameter WIDTH = 8;
+    parameter DEPTH = 16;
 
-    //Outputs of UUT
-    wire [7:0] dout;
-    wire full;
-    wire empty;
+    // Inputs of UUT
+    reg clk;             // System clock
+    reg rst;             // Synchronous reset
+    reg w_en;            // Write enable
+    reg r_en;            // Read enable
+    reg [WIDTH-1:0] din; // Input datastream
 
-    fifo uut(
+    // Outputs of UUT
+    wire [WIDTH-1:0] dout; // Output datastream
+    wire full;             // Full flag
+    wire empty;            // Empty flag
+
+    fifo #(
+        .BIT_WIDTH(WIDTH),
+        .FIFO_DEPTH(DEPTH)
+    ) uut(
         .clk(clk),
         .rst(rst),
         .w_en(w_en),
@@ -24,6 +31,7 @@ module fifo_tb();
         .empty(empty)
     );
 
+    // Clock generation
     always begin
         #5 clk = ~clk;
     end
@@ -31,17 +39,19 @@ module fifo_tb();
     integer i;
 
     initial begin
-        //Initialization
+        // Initialization
         clk = 0;
         rst = 1;
         w_en = 0;
         r_en = 0;
         din = 8'b0;
 
+        // Releasing reset
         #10
         rst = 0;
         #5
 
+        // Writing to FIFO until full (Depth = 16, writes 17 to test guard)
         w_en = 1;
         for(i = 0; i <= 16; i = i+1) begin
             din = i;
@@ -50,6 +60,7 @@ module fifo_tb();
         w_en = 0;
         #10
 
+        // Reading to FIFO until empty
         r_en = 1;
         for(i = 0; i <= 16; i = i+1) begin
             #10;
@@ -57,6 +68,7 @@ module fifo_tb();
         r_en = 0;
         #10
 
+        // Writing to verify pointer roll-over behavior after a full cycle.
         w_en = 1;
         for(i = 0; i <= 16; i = i+1) begin
             din = i+16;
@@ -68,10 +80,13 @@ module fifo_tb();
         $finish;
     end
 
+    // Monitoring and Waveform Generation
     initial begin
         $monitor("Time=%0t | rst=%b | w_en=%b | din=%h | r_en=%b | dout=%h | full=%b | empty=%b",
                 $time, rst, w_en, din, r_en, dout, full, empty);
-        $dumpfile("waveform.vcd");
+        
+        // Waveform dump
+        $dumpfile("fifo.vcd");
         $dumpvars(0, fifo_tb);
     end
 endmodule
