@@ -32,24 +32,34 @@ module fifo_tb();
     );
 
     // Clock generation
+    initial begin
+        // Initialization
+        clk = 0;
+    end
     always begin
         #5 clk = ~clk;
     end
 
-    integer i;
-
+    // Reset control
     initial begin
         // Initialization
-        clk = 0;
         rst = 1;
+        // Releasing reset
+        #10
+        rst = 0;
+    end
+
+    // Data transfer tests
+    integer i;
+    initial begin
+        // Initialization
         w_en = 0;
         r_en = 0;
         din = 8'b0;
 
-        // Releasing reset
-        #10
-        rst = 0;
-        #5
+        // Waiting for reset to clear
+        #15;
+        @(posedge clk);
 
         // Writing to FIFO until full (Depth = 16, writes 17 entries to test guard)
         w_en = 1;
