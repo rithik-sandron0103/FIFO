@@ -71,8 +71,8 @@ module fifo_tb();
         din = 8'b0;
 
         // Waiting for reset to clear
-        #40
-        @(posedge wclk) 
+        #40;
+        @(posedge wclk);
 
         // Write burst until full (Depth = 16, writes 17 entries to test guard)
         w_en = 1;
