@@ -18,7 +18,7 @@ module fifo_tb();
     wire empty;            // Empty flag
 
     fifo #(
-        .BIT_WIDTH(WIDTH),
+        .DATA_WIDTH(WIDTH),
         .FIFO_DEPTH(DEPTH)
     ) uut(
         .clk(clk),
