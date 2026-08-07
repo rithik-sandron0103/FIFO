@@ -36,6 +36,7 @@ module Top #(
         .waddr(waddr),
         .din(din),
         .rclk(rclk),
+        .rclken(r_en & !rempty),
         .raddr(raddr),
         .dout(dout)
     );

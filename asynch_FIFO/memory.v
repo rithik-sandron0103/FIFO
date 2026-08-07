@@ -6,8 +6,9 @@ module mem #(
             input [$clog2(FIFO_DEPTH)-1:0] waddr,  // Dynamic write address bus
             input [DATA_WIDTH-1:0] din,            // Input data bus
             input rclk,                            // Read domain clock
+            input rclken,                          // Read clock enable
             input [$clog2(FIFO_DEPTH)-1:0] raddr,  // Dynamic read address bus
-            output [DATA_WIDTH-1:0] dout           // Output data bus
+            output reg [DATA_WIDTH-1:0] dout       // Output data bus
             );
 
     // Memory array declaration: 16 rows of 8-bit data (by default)
@@ -18,7 +19,9 @@ module mem #(
         if (wclken) memory_array[waddr] <= din;
     end
 
-    // Asynchronous read logic
-    assign dout = memory_array[raddr];
+    // Synchronous read logic
+    always @(posedge rclk) begin
+        if (rclken) dout <= memory_array[raddr];
+    end
 
 endmodule

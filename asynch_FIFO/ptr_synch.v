@@ -11,16 +11,19 @@ module synchronizer #(
 
     // First stage synchronizer register
     reg [ADDR:0] q1_ptr;
+    reg [ADDR:0] q2_ptr;
 
     // 2-stage D flip-flop Synchronizer
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             q1_ptr <= {(ADDR+1){1'b0}};
+            q2_ptr  <= {(ADDR+1){1'b0}};
             ptr_out <= {(ADDR+1){1'b0}};
         end
         else begin
             q1_ptr <= ptr_in;   // Stage 1: Captures asynchronous input (prone to metastability)
-            ptr_out <= q1_ptr;  // Stage 2: Outputs synchronized, stable signal to destination logic
+            q2_ptr <= q1_ptr;   // Stage 2: Allows metastable state to resolve
+            ptr_out <= q2_ptr;  // Clean output
         end
     end
 endmodule
